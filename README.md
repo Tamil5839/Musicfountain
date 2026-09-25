@@ -74,6 +74,9 @@ Settings panel (top right):
 - **Browser support for AAC**: Chrome/Edge on macOS and Windows, and Safari, encode AAC. Chromium
   on Linux usually can't. There Fountain falls back to Opus audio and warns you; that file plays
   in browsers and VLC, but for QuickTime and X, export from macOS/Windows Chrome or Safari.
+- **Browser support for H.264**: if a browser has no H.264 encoder (some Linux Chromium builds),
+  Fountain exports VP9 in MP4 instead and says so. That file plays in browsers and VLC, but X
+  and QuickTime need the H.264 version.
 - X accepts these files directly (H.264 High, AAC, ≤60 fps, 16:9 / 9:16 / 1:1). For the best
   quality on X, keep clips under 2:20 and prefer 1080p 30 fps unless the song is very fast.
 
@@ -181,5 +184,9 @@ npx tsx tools/show-test.ts tools/out/edm.wav tools/out/piano.wav tools/out/pop.w
 - **Pop, 100 BPM, verse/pre-chorus/chorus/bridge.** Section boundaries match the arrangement
   (9.6 / 38.4 / 57.6 / 86.4 / 105.6 / 115.2 / 134.4 s). Verses are medium (shooters every 2 bars);
   choruses are intense with an accent on entry. The bridge becomes a breakdown.
+- Browser tests: `tools/browser-test.mjs` (screenshots of moments of a show) and
+  `tools/export-test.mjs` (end-to-end export of a clip) drive the dev server with Playwright.
+  A 3 s 1080×1080 clip exported headless came out with 90 frames = 3.000 s of video, audio
+  covering the same span, and the moov atom first.
 - Consecutive sections never share an oarsman, fan, ring or shooter pattern, a palette, a color
   mode or a camera preset.

@@ -307,10 +307,11 @@ export function idleTargets(t: number, out: JetTargets): void {
 // Audio playback clock
 // ---------------------------------------------------------------------------------------------
 export class AudioPlayer {
-  readonly ctx: AudioContext;
+  ctx: AudioContext;
   private buffer: AudioBuffer | null = null;
   private source: AudioBufferSourceNode | null = null;
-  private readonly gain: GainNode;
+  private gain: GainNode;
+  private freshOutput = false;
   private startedAt = 0;
   private offset = 0;
   private offsetAtStart = 0;
@@ -321,6 +322,14 @@ export class AudioPlayer {
     this.ctx = new AudioContext({ latencyHint: 'playback' });
     this.gain = this.ctx.createGain();
     this.gain.connect(this.ctx.destination);
+  }
+
+  /**
+   * Rebuild the output path on the next play(). Safari can leave an AudioContext "running" but
+   * silent after other media (the export preview <video>) took over the audio output.
+   */
+  resetOutput() {
+    this.freshOutput = true;
   }
 
   load(buffer: AudioBuffer) {
@@ -343,6 +352,15 @@ export class AudioPlayer {
 
   async play() {
     if (!this.buffer) return;
+    if (this.freshOutput) {
+      // runs inside the play gesture, so the new context is allowed to start
+      this.freshOutput = false;
+      this.stopSource();
+      void this.ctx.close().catch(() => {});
+      this.ctx = new AudioContext({ latencyHint: 'playback' });
+      this.gain = this.ctx.createGain();
+      this.gain.connect(this.ctx.destination);
+    }
     if (this.ctx.state !== 'running') await this.ctx.resume();
     if (this.offset >= this.buffer.duration - 0.05) this.offset = 0;
     this.stopSource();

@@ -194,6 +194,7 @@ async function onExport() {
       ui.exportFailed(`Export failed: ${err instanceof Error ? err.message : String(err)}`);
     }
   } finally {
+    player.resetOutput();
     exporting = false;
     abort = null;
     markDirty();

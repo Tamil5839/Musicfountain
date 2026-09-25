@@ -211,7 +211,7 @@ export async function exportVideo(
   });
   venc.configure(videoConfig);
   const aenc = new AudioEncoder({
-    output: (chunk, meta) => muxer.addAudioChunk(chunk, meta),
+    output: (chunk, meta) => muxer.addAudioChunk(chunk, fixAacDescription(meta)),
     error: (e) => (encodeError = e instanceof Error ? e : new Error(String(e))),
   });
   aenc.configure(audio.config);
@@ -270,6 +270,43 @@ export async function exportVideo(
     videoCodec: videoConfig.codec,
     warnings,
   };
+}
+
+/**
+ * Safari's AAC encoder hands back a whole ES_Descriptor (the esds payload) as the decoder
+ * description instead of the bare AudioSpecificConfig. mp4-muxer wraps the description in its
+ * own esds, so the file ends up with a descriptor nested inside a descriptor and no player can
+ * decode the audio (silent MP4). Unwrap it to the DecoderSpecificInfo (tag 0x05) payload.
+ */
+function fixAacDescription(meta: EncodedAudioChunkMetadata | undefined): EncodedAudioChunkMetadata | undefined {
+  const cfg = meta?.decoderConfig;
+  if (!cfg?.description || !cfg.codec.startsWith('mp4a')) return meta;
+  const d = cfg.description;
+  const bytes = ArrayBuffer.isView(d) ? new Uint8Array(d.buffer, d.byteOffset, d.byteLength) : new Uint8Array(d);
+  if (bytes[0] !== 0x03) return meta; // already a bare AudioSpecificConfig
+  const asc = findDescriptor(bytes, 0x05);
+  return asc ? { ...meta, decoderConfig: { ...cfg, description: asc.slice() } } : meta;
+}
+
+/** Walks MPEG-4 descriptors (ES_Descr 0x03 → DecoderConfigDescr 0x04 → 0x05) and returns the payload of `tag`. */
+function findDescriptor(b: Uint8Array, tag: number): Uint8Array | null {
+  let i = 0;
+  while (i < b.length) {
+    const t = b[i++];
+    let len = 0;
+    for (let k = 0; k < 4 && i < b.length; k++) {
+      const c = b[i++];
+      len = (len << 7) | (c & 0x7f);
+      if (!(c & 0x80)) break;
+    }
+    const body = b.subarray(i, Math.min(b.length, i + len));
+    if (t === tag) return body;
+    // ES_Descr: ES_ID(2) + flags(1) [+ optional fields, not set by encoders]; DecoderConfig: 13 bytes of fields
+    if (t === 0x03) return findDescriptor(body.subarray(3), tag);
+    if (t === 0x04) return findDescriptor(body.subarray(13), tag);
+    i += len;
+  }
+  return null;
 }
 
 function encodeAudio(enc: AudioEncoder, buf: AudioBuffer, start: number, duration: number, delay: number) {

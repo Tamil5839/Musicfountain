@@ -285,8 +285,14 @@ export class UI {
 
   closeExport() {
     this.modal.classList.add('hidden');
+    // unload the preview so it releases the audio output (Safari otherwise keeps Web Audio silent)
     const v = this.modal.querySelector('video');
-    if (v) v.pause();
+    if (v) {
+      v.pause();
+      v.removeAttribute('src');
+      v.load();
+      v.remove();
+    }
   }
 
   // ------------------------------------------------------------------------- per-frame

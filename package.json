@@ -1,0 +1,24 @@
+{
+  "name": "fountain",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Drop in a song, get a choreographed night-time musical fountain show, export it as MP4.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "lil-gui": "^0.21.0",
+    "mp4-muxer": "^5.2.2",
+    "three": "^0.186.1"
+  },
+  "devDependencies": {
+    "@types/three": "^0.186.0",
+    "tsx": "^4.23.15",
+    "typescript": "~5.9.3",
+    "vite": "^8.0.0"
+  }
+}
